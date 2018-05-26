@@ -1,0 +1,18 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Economic Geography}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Economic Growth Is Not Spatially Equal}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{What areas are growing and what areas are declining?}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{Finding Spatial \046 Temporal Patterns of Urban Economic Growth}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.4}{US Census Zipcode Business Patterns}{section.2}% 6
+\BOOKMARK [1][-]{section.3}{Methodology}{}% 7
+\BOOKMARK [2][-]{subsection.3.1}{Data}{section.3}% 8
+\BOOKMARK [2][-]{subsection.3.2}{Visual Exploratory Analysis}{section.3}% 9
+\BOOKMARK [2][-]{subsection.3.3}{Elbow Method}{section.3}% 10
+\BOOKMARK [2][-]{subsection.3.4}{K Means Clustering}{section.3}% 11
+\BOOKMARK [2][-]{subsection.3.5}{Agglomerative Clustering}{section.3}% 12
+\BOOKMARK [2][-]{subsection.3.6}{Comparing Methods}{section.3}% 13
+\BOOKMARK [1][-]{section.4}{Interpretation \046 Policy Ramifications}{}% 14
+\BOOKMARK [2][-]{subsection.4.1}{Interpreting the Clusters Temporally}{section.4}% 15
+\BOOKMARK [2][-]{subsection.4.2}{Divergent \046 Convergent Trends}{section.4}% 16
+\BOOKMARK [2][-]{subsection.4.3}{Interpreting the Clusters Spatially}{section.4}% 17
+\BOOKMARK [1][-]{section.5}{Conclusion}{}% 18

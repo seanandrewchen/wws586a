@@ -1,0 +1,353 @@
+---
+title: '[WWS 586A]: Problem Set 4'
+author: "Sean Andrew Chen"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document: default
+---
+
+### [WWS 586a] Problem Set 4
+
+For these exercises we will be using the Global Terrorism Database (GTD) which can be found on Kaggle:
+[https://www.kaggle.com/START-UMD/gtd/data](Global Terrorism Database). The GTD contains a great deal of information about terrorist events and contains roughly 170,000 such events. 
+
+### Due Date and Time
+
+Due on Friday, April 27th at 11:59PM
+
+### Guidelines
+
+All problem sets must be submitted as two files:
+
+1. A *R Markdown* file with the following format: "lastname_firstname_ps4.Rmd". Ie. for me this would be: "anastasopoulos_jason_ps4.Rmd"
+
+2. A compiled *R Markdown* file in HTML with the following format: "lastname_firstname_ps4.html" Ie. for me this would be: "anastasopoulos_jason_ps4.html"
+
+Please only fill in the sections labelled "YOUR CODE HERE"
+  
+### Learning about assassinations and bombings through random forests
+
+For this problem set, we will be taking the training wheels off and you will have to use your discretion to train a model using random forests.
+
+The goal of this portion of the assignment is to build a machine learning classifier that will enable you to predict assasination events as a function of the features in the data. 
+
+Assasinations are labeled as "1" in the variable "attacktype1" within the GTD and bombings are labeled as "3".
+Using whichever features you would like and whichever package you would like, train two random forests classifiers to predict assassinations and bombings using an 80/20 training test split. 
+
+Report the: accuracy, specificity, sensitivity and F1 statistics of the classifiers that you trained for each model.
+
+```{r}
+### Code for assassinations classifier
+
+##### YOUR CODE HERE ###################################
+
+library(pacman)
+pacman::p_load(tm,SnowballC,foreign,RCurl,plyr,slam,foreign,wordcloud,LiblineaR,e1071,caret,ranger,rpart,rpart.plot)
+
+global.terrorism <- read.csv("globalterrorismdb_0617dist.csv")
+download.file("https://www.start.umd.edu/gtd/downloads/Codebook.pdf", "codebook.pdf")
+
+global.terrorism.variables <- c("attacktype1", "iyear", "imonth", "iday", "extended", 
+                                "crit1", "crit2", "crit3", "multiple", "region", 
+                                "success", "suicide", "targtype1", "weaptype1",
+                                "nkill")
+
+global.terrorism.df <- global.terrorism[ , global.terrorism.variables]
+global.terrorism.df <- na.omit(global.terrorism.df)
+
+global.terrorism.df$region <- as.factor(global.terrorism.df$region)
+global.terrorism.df$targtype1 <- as.factor(global.terrorism.df$targtype1)
+global.terrorism.df$weaptype1 <- as.factor(global.terrorism.df$weaptype1)
+global.terrorism.df <- data.frame(model.matrix(~ . -1, global.terrorism.df))
+
+assassination.df <- global.terrorism.df
+assassination.df$attacktype1 <- ifelse(global.terrorism.df$attacktype1==1, 1, 0)
+
+set.seed(100)
+
+assassination.train <- sample(nrow(assassination.df), 0.8*nrow(assassination.df), replace = FALSE)
+assassination.train.set <- assassination.df[assassination.train,]
+assassination.valid.set <- assassination.df[-assassination.train,]
+
+train.Control <- trainControl(method = "repeatedcv", number = 10, repeats = 1)
+assassination.model <- ranger(factor(attacktype1) ~ ., data = train.set, importance = 'permutation',
+                             write.forest=TRUE,
+                            probability=TRUE)
+
+assassination.prediction <- predict(assassination.model, valid.set)
+binary.cutoff <- ifelse(assassination.prediction$predictions[,2] > 0.5, 1, 0)
+hist(assassination.prediction$predictions[,2])
+
+confusion <- table(binary.cutoff, factor(valid.set$attacktype1))
+confusion
+
+assassination.TP = confusion[2,2]
+assassination.TN = confusion[1,1]
+assassination.FP = confusion[2,1]
+assassination.FN = confusion[1,2]
+
+assassination.accuracy = (assassination.TP + assassination.TN) / (assassination.TP + assassination.TN + assassination.FP + assassination.FN)
+assassination.specificity = assassination.TN / (assassination.TN + assassination.FP)
+assassination.sensitivity = assassination.TP / (assassination.TP + assassination.FN)
+assassination.F1 = (2 * assassination.TP) / ((2 * assassination.TP) + assassination.FP + assassination.FN)
+
+sprintf("Accuracy: %f", assassination.accuracy)
+sprintf("Specificity: %f", assassination.specificity)
+sprintf("Sensitivity: %f", assassination.sensitivity)
+sprintf("F1 Score: %f", assassination.F1)
+
+assassination.tree.visualization <- rpart(factor(attacktype1)~., train.set)
+rpart.plot(assassination.tree.visualization)
+
+##### YOUR CODE HERE ###################################
+```
+
+
+
+```{r}
+### Code for bombings classifier
+##### YOUR CODE HERE ###################################
+
+bombing.df <- global.terrorism.df
+bombing.df$attacktype1 <- ifelse(global.terrorism.df$attacktype1==3, 1, 0)
+
+set.seed(100)
+
+bombing.train <- sample(nrow(bombing.df), 0.8*nrow(bombing.df), replace = FALSE)
+bombing.train.set <- bombing.df[bombing.train,]
+bombing.valid.set <- bombing.df[-bombing.train,]
+
+train.Control <- trainControl(method = "repeatedcv", number = 10, repeats = 1)
+bombing.model <- ranger(factor(attacktype1) ~ ., data = train.set, importance = 'permutation',
+                             write.forest=TRUE,
+                            probability=TRUE)
+
+
+bombing.prediction <- predict(bombing.model, valid.set)
+binary.cutoff <-ifelse(bombing.prediction$predictions[,2] > 0.5, 1, 0)
+hist(bombing.prediction$predictions[,2])
+
+confusion<-table(binary.cutoff, factor(valid.set$attacktype1))
+confusion
+
+bombing.TP = confusion[2,2]
+bombing.TN = confusion[1,1]
+bombing.FP = confusion[2,1]
+bombing.FN = confusion[1,2]
+
+bombing.accuracy = (bombing.TP + bombing.TN) / (bombing.TP + bombing.TN + bombing.FP + bombing.FN)
+bombing.specificity = bombing.TN / (bombing.TN + bombing.FP)
+bombing.sensitivity = bombing.TP / (bombing.TP + bombing.FN)
+bombing.F1 = (2 * bombing.TP) / ((2 * bombing.TP) + bombing.FP + bombing.FN)
+
+sprintf("Accuracy: %f", bombing.accuracy)
+sprintf("Specificity: %f", bombing.specificity)
+sprintf("Sensitivity: %f", bombing.sensitivity)
+sprintf("F1 Score: %f", bombing.F1)
+
+bombing.tree.visualization <- rpart(factor(attacktype1)~., train.set)
+rpart.plot(bombing.tree.visualization)
+
+##### YOUR CODE HERE ###################################
+```
+
+### 2. Which features predict assasinations and bombings best?
+
+One of the best things about the random forests algorithm is that it allows us to understand which features contributed most to prediction success. 
+
+Create a plot of the top 10 most important features for each classifier using the % increase in MSE estimate to determine feature importance. 
+
+```{r}
+### Plot for assasinations classifier
+##### YOUR CODE HERE ###################################
+
+assassination.important.variables = assassination.model$variable.importance
+
+features <- names(assassination.important.variables)
+importance <- as.vector(assassination.important.variables)
+importance.df <- data.frame(features, importance)
+importance.df = importance.df[order(-importance.df$importance),]
+importance.df = importance.df[1:10,]
+
+
+assassination.plot <- ggplot(importance.df, aes(x = reorder(features, importance), y = importance))
+assassination.plot + theme_classic() + geom_bar(stat = "identity") + 
+       ylab("Importance of Variable") + 
+       xlab("Features")
+
+##### YOUR CODE HERE ###################################
+```
+
+
+```{r}
+### Plot for bombings classifier
+##### YOUR CODE HERE ###################################
+
+bombing.important.variables = bombing.model$variable.importance
+
+features <- names(bombing.important.variables)
+importance <- as.vector(bombing.important.variables)
+importance.df <- data.frame(features, importance)
+importance.df = importance.df[order(-importance.df$importance),]
+importance.df = importance.df[1:10,]
+
+bombing.plot <- ggplot(importance.df, aes(x = reorder(features, importance), y = importance))
+bombing.plot + theme_classic() + geom_bar(stat = "identity") + 
+       ylab("Importance of Variable") + 
+       xlab("Features")
+
+##### YOUR CODE HERE ###################################
+```
+
+
+### 3. Lasso classification of assasinations and bombings
+
+Using logistic regression with  $L_1$ regularization (logistic regression lasso), train a model with the same features that you used for your decision tree classifiers above using an 80/20 train/test split. 
+
+Report the accuracy, specificity, sensistivity and F1 statistics for the trained logistic regression classifier for assasinations and bombings
+
+```{r}
+### Code for assasinations classifier
+##### YOUR CODE HERE ###################################
+
+library(glmnet)
+
+train.x = as.matrix(assassination.train.set[,-1])
+valid.x = as.matrix(assassination.valid.set[,-1])
+
+assassination.lasso <- cv.glmnet(x = train.x, y=  as.factor(assassination.train.set[,1]), family='binomial', alpha=1,
+                       standardize=TRUE, type.measure='auc')
+plot(assassination.lasso)
+
+plot(assassination.lasso$glmnet.fit, xvar="lambda", label=TRUE)
+assassination.lasso$lambda.min
+assassination.lasso$lambda.1se
+
+coef(assassination.lasso, s=assassination.lasso$lambda.min)
+
+assassination.lasso.prediction <- predict(assassination.lasso, valid.x, type="response")
+binary.cutoff <- ifelse(assassination.lasso.prediction > 0.5, 1, 0)
+hist(assassination.lasso.prediction)
+
+confusion <- table(binary.cutoff, factor(assassination.valid.set$attacktype1))
+confusion
+
+assassination.TP = confusion[2,2]
+assassination.TN = confusion[1,1]
+assassination.FP = confusion[2,1]
+assassination.FN = confusion[1,2]
+
+assassination.accuracy = (assassination.TP + assassination.TN) / (assassination.TP + assassination.TN + assassination.FP + assassination.FN)
+assassination.specificity = assassination.TN / (assassination.TN + assassination.FP)
+assassination.sensitivity = assassination.TP / (assassination.TP + assassination.FN)
+assassination.F1 = (2 * assassination.TP) / ((2 * assassination.TP) + assassination.FP + assassination.FN)
+
+sprintf("Accuracy: %f", assassination.accuracy)
+sprintf("Specificity: %f", assassination.specificity)
+sprintf("Sensitivity: %f", assassination.sensitivity)
+sprintf("F1 Score: %f", assassination.F1)
+
+##### YOUR CODE HERE ###################################
+```
+
+
+
+```{r}
+### Code for bombings classifier
+##### YOUR CODE HERE ###################################
+
+train.x = as.matrix(bombing.train.set[,-1])
+valid.x = as.matrix(bombing.valid.set[,-1])
+
+bombing.lasso <- cv.glmnet(x = train.x, y=  as.factor(bombing.train.set[,1]), family='binomial', alpha=1,
+                       standardize=TRUE, type.measure='auc')
+plot(bombing.lasso)
+
+plot(bombing.lasso$glmnet.fit, xvar="lambda", label=TRUE)
+bombing.lasso$lambda.min
+bombing.lasso$lambda.1se
+
+coef(bombing.lasso, s=bombing.lasso$lambda.min)
+
+bombing.lasso.prediction <- predict(bombing.lasso, valid.x, type="response")
+binary.cutoff <- ifelse(bombing.lasso.prediction > 0.5, 1, 0)
+hist(bombing.lasso.prediction)
+
+confusion <- table(binary.cutoff, factor(bombing.valid.set$attacktype1))
+confusion
+
+bombing.TP = confusion[2,2]
+bombing.TN = confusion[1,1]
+bombing.FP = confusion[2,1]
+bombing.FN = confusion[1,2]
+
+bombing.accuracy = (bombing.TP + bombing.TN) / (bombing.TP + bombing.TN + bombing.FP + bombing.FN)
+bombing.specificity = bombing.TN / (bombing.TN + bombing.FP)
+bombing.sensitivity = bombing.TP / (bombing.TP + bombing.FN)
+bombing.F1 = (2 * bombing.TP) / ((2 * bombing.TP) + bombing.FP + bombing.FN)
+
+sprintf("Accuracy: %f", bombing.accuracy)
+sprintf("Specificity: %f", bombing.specificity)
+sprintf("Sensitivity: %f", bombing.sensitivity)
+sprintf("F1 Score: %f", bombing.F1)
+
+##### YOUR CODE HERE ###################################
+```
+
+
+
+
+### 4. Features predicting bombings and assisnations best using the lasso.  
+
+Create a plot of the top 10 most important features for each classifier using the coefficient estimates from the lasso model. As long as you standardized your data when you estimated the lasso model, the coefficient estimates will be on the same scale.
+
+```{r}
+### Plot for assasinations classifier
+##### YOUR CODE HERE ###################################
+
+features <- names(assassination.train.set[-1])
+importance <- as.vector(abs(coef(assassination.lasso)[-1]))
+
+importance.df = data.frame(features, importance)
+importance.df = importance.df[order(-importance.df$importance),]
+importance.df = importance.df[1:10,]
+
+assassination.plot <- ggplot(importance.df, aes(x = reorder(features, importance), y = importance))
+assassination.plot + theme_classic() + geom_bar(stat = "identity") + 
+       ylab("Importance of Variable") + 
+       xlab("Features")
+
+##### YOUR CODE HERE ###################################
+```
+
+
+```{r}
+### Plot for bombings classifier
+##### YOUR CODE HERE ###################################
+
+features <- names(bombing.train.set[-1])
+importance <- as.vector(abs(coef(bombing.lasso)[-1]))
+
+importance.df = data.frame(features, importance)
+importance.df = importance.df[order(-importance.df$importance),]
+importance.df = importance.df[1:10,]
+
+bombing.plot <- ggplot(importance.df, aes(x = reorder(features, importance), y = importance))
+bombing.plot + theme_classic() + geom_bar(stat = "identity") + 
+       ylab("Importance of Variable") + 
+       xlab("Features")
+
+##### YOUR CODE HERE ###################################
+```
+
+
+
+
+
+
+
+
+
+
+

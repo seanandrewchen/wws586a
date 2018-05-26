@@ -1,0 +1,189 @@
+---
+title: '[WWS 586A]: Problem Set 3'
+author: "Sean Andrew Chen"
+output:
+  html_document: default
+  html_notebook: default
+  pdf_document: default
+---
+
+### [WWS 586a] Problem Set 3
+
+For these exercises we will be using the movie reviews collected by Pang and Lee. The data can be directly loaded into R from here:
+[http://www.ocf.berkeley.edu/~janastas/data/movie-pang02.csv](Movie Reviews). These reviews are classified into positive and negative ratings. 
+
+### Due Date and Time
+
+Due on Monday, April 2nd at 11:59PM
+
+### Guidelines
+
+All problem sets must be submitted as two files:
+
+1. A *R Markdown* file with the following format: "lastname_firstname_ps3.Rmd". Ie. for me this would be: "anastasopoulos_jason_ps3.Rmd"
+
+2. A compiled *R Markdown* file in HTML with the following format: "lastname_firstname_ps2.html" Ie. for me this would be: "anastasopoulos_jason_ps3.html"
+
+Please only fill in the sections labelled "YOUR CODE HERE"
+  
+### 1. Cleaning text 
+
+Write a function that cleans each movie review by doing ONLY the following:
+
+- Tokenizing words.
+- Removing punctuation.
+- Putting words in lower case.
+- Removing stop words.
+
+```{r}
+# Let's first load the R packages and the data
+library(pacman)
+
+# This loads and installs the packages you need at once
+pacman::p_load(tm,SnowballC,foreign,plyr,twitteR,slam,foreign,wordcloud,LiblineaR,e1071,caret)
+
+##### YOUR CODE HERE ###################################
+ 
+ movies.df <- read.csv("http://www.ocf.berkeley.edu/~janastas/data/movie-pang02.csv")
+
+ require(tm)
+ text_cleaner <- function(corp.df){
+    corp.df <- Corpus(VectorSource(corp.df))
+    corp.df <- tm_map(corp.df, removePunctuation)
+    corp.df <- tm_map(corp.df, tolower)
+    corp.df <- tm_map(corp.df, removeWords, stopwords("english"))
+    return(corp.df)
+ }
+ 
+ corpus.df <- text_cleaner(movies.df$text)
+ 
+ ##### YOUR CODE HERE ###################################
+```
+
+
+### 2. Document-Term Matrices
+Create two document-term matricies using your pre-processed text data. 
+
+Create one document-term matrix which uses only the text frequencies and call that document term matrix "reviewsDTM_F."
+
+Create another document-term matrix which had TF-IDF weights and call that document term matrix "reviewsDT_TFIDF"
+
+```{r}
+##### YOUR CODE HERE ###################################
+
+#UNWEIGHTED
+ 
+ reviewsDTM_F <- DocumentTermMatrix(corpus.df)
+ reviewsDTM_F <- removeSparseTerms(reviewsDTM_F, 0.99)
+ reviewsDTM_F.matrix <- as.matrix(reviewsDTM_F)
+
+#WEIGHTED
+ 
+ reviewsDT_TFIDF <- DocumentTermMatrix(corpus.df, control = list(weighting = weightTfIdf))
+ reviewsDT_TFIDF <- removeSparseTerms(reviewsDT_TFIDF, 0.99)
+ reviewsDT_TFIDF.matrix <- as.matrix(reviewsDT_TFIDF)
+
+##### YOUR CODE HERE ###################################
+```
+
+### 3. Train a naive-bayes classifier
+
+Using the document-term matrix "reviewsDTM_F", train a naive Bayes classifier with a 80\%/20\% training/testing split. 
+
+Using 10--fold cross validation, calculate and report:
+
+- Accuracy.
+- Specificity.
+- Sensitivity.
+- F1 Score
+- Confusion matrix.
+
+Save the trained classifier as the object ``trainedNBclassifier.''
+
+```{r}
+##### YOUR CODE HERE ###################################
+
+ good.review <- ifelse(movies.df$class=="Pos", 1, 0)
+
+ train <- sample(nrow(movies.df), nrow(movies.df) * 0.8)
+ 
+ train.x <- reviewsDTM_F.matrix[train,]
+ valid.x <- reviewsDTM_F.matrix[-train,]
+ train.y <- good.review[train]
+ valid.y <- good.review[-train]
+
+ #trainedNBclassifier.with.crossvalidation <- train(train.x, factor(train.y), train.Control = trainControl(method = "cv", number = 10))
+ trainedNBclassifier.wtho.crossvalidation <- naiveBayes(x=train.x, y=factor(train.y))
+ 
+ #movie.predictions.with.crossvalidation <- predict(trainedNBclassifier.with.crossvalidation, valid.x)
+ movie.predictions.wtho.crossvalidation <- predict(trainedNBclassifier.wtho.crossvalidation, valid.x)
+
+ confusion <- table(movie.predictions.wtho.crossvalidation, valid.y) 
+ confusion
+ 
+ accuracy <- c(confusion[1,1] + confusion[2,2]) / sum(confusion)
+ specificity <- confusion[1,1] / sum(confusion[1,])
+ sensitivity <- confusion[2,2] / sum(confusion[2,])
+ F1 <- 2 * ((accuracy * sensitivity)/(accuracy + sensitivity))
+
+ 
+ sprintf("Accuracy: %f", accuracy)
+ sprintf("Specificity: %f", specificity)
+ sprintf("Sensitivity: %f", sensitivity)
+ sprintf("F1 Score: %f", F1)
+
+##### YOUR CODE HERE ###################################
+```
+
+
+### 4. Train a naive-bayes classifier (again)
+
+Repeat question 4 using the "reviewsDT_TFIDF" document-term matrix.
+
+```{r}
+##### YOUR CODE HERE ###################################
+ 
+ train.x.1 <-reviewsDT_TFIDF.matrix[train,]
+ valid.x.1 <-reviewsDT_TFIDF.matrix[-train,]
+
+ #trainedNBclassifier.with.crossvalidation.1 <- train(train.x.1, factor(train.y), train.Control = trainControl(method = "cv", number = 10))
+ trainedNBclassifier.wtho.crossvalidation.1 <- naiveBayes(x=train.x.1, y = factor(train.y))
+ 
+ #movie.predictions.with.crossvalidation.1 <- predict(trainedNBclassifier.with.crossvalidation.1, valid.x.1)
+ movie.predictions.wtho.crossvalidation.1 <- predict(trainedNBclassifier.wtho.crossvalidation.1, valid.x.1)
+
+ confusion.1 <- table(movie.predictions.wtho.crossvalidation.1, valid.y) 
+ confusion.1
+
+ accuracy.1 <- c(confusion.1[1,1] + confusion.1[2,2]) / sum(confusion.1)
+ specificity.1 <- confusion.1[1,1] / sum(confusion.1[1,])
+ sensitivity.1 <- confusion.1[2,2] / sum(confusion.1[2,])
+ F1.1 <- 2 * ((accuracy.1 * sensitivity.1)/(accuracy.1 + sensitivity.1))
+
+ sprintf("Accuracy: %f", accuracy.1)
+ sprintf("Specificity: %f", specificity.1)
+ sprintf("Sensitivity: %f", sensitivity.1)
+ sprintf("F1 Score: %f", F1.1)
+ 
+##### YOUR CODE HERE ###################################
+```
+
+
+Do your performance statistics improve? 
+
+Using the *F1* statistic as your measure, it is better to use only text frequency weighting or TF-IDF weighting?
+
+Using the weighted matrix, the F1 score was actually *lower* than the unweighted one. Cross validation would have been better, but the computational intensity of that left my machine crashing.
+
+
+
+
+
+
+
+
+
+
+
+
+
